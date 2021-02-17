@@ -2,9 +2,22 @@
 
 #include <cmath>
 #include <utility>
+#include <concepts>
 
 namespace hill_climbing {
-    template<typename Problem>
+#if __cplusplus > 201703L
+    template<typename T>
+    concept StochasticallySolvable = requires(T a) {
+        typename T::solution;
+        { a.initial_guess() } -> std::convertible_to<typename T::solution>;
+        { a.fitness({}) } -> std::convertible_to<float>;
+        { a.random_neighbor({}, float()) } -> std::convertible_to<typename T::solution>;
+    };
+#else
+#define StochasticallySolvable typename
+#endif
+
+    template<StochasticallySolvable Problem>
     class stochastic {
     public:
         stochastic(
