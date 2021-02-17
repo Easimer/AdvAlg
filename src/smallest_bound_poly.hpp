@@ -131,5 +131,5 @@ private:
     std::vector<vec2> const &_points;
 
     // faszom C++
-    const float PI = 3.14159265358979323846;
+    const float PI = 3.14159265358979323846f;
 };

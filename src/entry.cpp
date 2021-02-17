@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "vec2.hpp"
 
+#include "gnuplot.hpp"
 #include "hc_stochastic.hpp"
 #include "hc_steepest_ascent.hpp"
 #include "smallest_bound_poly.hpp"
@@ -23,57 +24,32 @@ random_data() {
     return ret;
 }
 
-static void print_gnuplot_header() {
-    printf("set style increment user\n");
-    printf("plot '-' title 'Pontok' with points ps 2,\\\n\
-                 '-' title 'HC-Stochastic' with linespoints ls 3,\\\n\
-                 '-' title 'HC-Steepest-Ascent' with linespoints ls 4\n\
-    ");
-}
-
-static void print_gnuplot_points(
-    std::vector<vec2> const &points) {
-    printf("# Points\n");
-    printf("# X Y\n");
-    for (auto &pt : points) {
-        printf("%f %f\n\n", pt.x, pt.y);
-    }
-    printf("e\n");
-}
-
-static void print_gnuplot_polygon(
-    smallest_bounding_polygon::solution const &polygon) {
-    auto const N = polygon.size();
-
-    for (int i = 0; i < N + 1; i++) {
-        auto &p = polygon[i % N];
-        printf("%f %f\n", p.x, p.y);
-    }
-    printf("e\n");
-}
-
-int main(int argc, char **argv) {
-    srand(0);
-
+static void hill_climbing_demo() {
     auto points = random_data();
     smallest_bounding_polygon problem(7, points);
     auto epsilon = 0.5f;
     auto minimum_change = 0.01f;
     auto max_steps = 100000;
 
-    print_gnuplot_header();
-    print_gnuplot_points(points);
+    auto solver0 = hill_climbing::stochastic(problem, epsilon, minimum_change, max_steps);
+    auto solution0 = solver0.optimize();
 
-    {
-        auto solver = hill_climbing::stochastic(problem, epsilon, minimum_change, max_steps);
-        auto solution = solver.optimize();
-        print_gnuplot_polygon(solution);
-    }
-    {
-        auto solver = hill_climbing::steepest_ascent(problem, epsilon, minimum_change, max_steps);
-        auto solution = solver.optimize();
-        print_gnuplot_polygon(solution);
-    }
+    auto solver1 = hill_climbing::steepest_ascent(problem, epsilon, minimum_change, max_steps);
+    auto solution1 = solver1.optimize();
+
+    auto plot = gnuplot::polygons_and_points {
+        { gnuplot::polygon, "HC-Stochastic", solution0 },
+        { gnuplot::polygon, "HC-Steepst-Ascent", solution1 },
+        { gnuplot::points, "Pontok", points }
+    };
+
+    printf("%s\n", plot.str().c_str());
+}
+
+int main(int argc, char **argv) {
+    srand(0);
+
+    hill_climbing_demo();
 
     return 0;
 }
