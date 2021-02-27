@@ -3,11 +3,12 @@ set(SRC
 
     hc_stochastic.hpp
     hc_steepest_ascent.hpp
+	gen_selection.hpp
 
     smallest_bound_poly.hpp
 
     vec2.hpp
-)
+ )
 
 add_executable(halal ${SRC})
 
