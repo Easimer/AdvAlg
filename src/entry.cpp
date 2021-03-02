@@ -68,7 +68,7 @@ static void print_graph(FILE *f, std::vector<city> const &cities, traveling_sale
      fprintf(f, "\n");
      for (auto idx : path) {
          auto &city = cities[idx];
-         fprintf(f, "C%zu [ pos = \"%f,%f!\"];\n", idx, city.x * 100, city.y * 100);
+         fprintf(f, "C%zu [ pos = \"%f,%f!\"];\n", idx, city.x, city.y);
      }
      fprintf(f, "}\n\n");
 }
@@ -395,29 +395,29 @@ static void genetic_demo() {
         { 1693, 4055 },
     };
 
-     size_t start_idx = 0;
+    size_t start_idx = 0;
 
-     char path_buf[64];
+    char path_buf[64];
 
-     auto logger = [&](int gen, std::vector<size_t> const &best) {
+    auto logger = [&](int gen, std::vector<size_t> const &best) {
 #if __linux__
-         if (gen % 20 != 0) {
-             return;
-         }
-         snprintf(path_buf, 63, "path%09d.dot", gen);
-         FILE *f = fopen(path_buf, "wb");
-         print_graph(f, cities, best);
-         fclose(f);
+        if (gen % 5 != 0) {
+            return;
+        }
+        snprintf(path_buf, 63, "path%09d.dot", gen);
+        FILE *f = fopen(path_buf, "wb");
+        print_graph(f, cities, best);
+        fclose(f);
 #endif
-     };
+    };
 
-     auto problem = traveling_salesman(cities, start_idx);
-     auto solver = genetic::algorithm<
-         decltype(problem),
-         decltype(logger)
-     >(problem, 100000, 0.01f, &logger);
+    auto problem = traveling_salesman(cities, start_idx);
+    auto solver = genetic::algorithm<
+        decltype(problem),
+        decltype(logger)
+    >(problem, 100000, 0.001f, &logger);
 
-     auto solutions = solver.optimize();
+    auto solutions = solver.optimize();
 }
 
 int main(int argc, char **argv) {

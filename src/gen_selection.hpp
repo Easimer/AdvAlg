@@ -27,7 +27,7 @@ namespace genetic {
         { a.init_population() } -> std::convertible_to<Population>;
         { a.evaluate(pop) } -> std::convertible_to<EvaluatedPopulation>;
         { a.select_next_gen(eval_pop) } -> std::convertible_to<std::pair<Population, Population>>;
-        { a.select_parents(pop) } -> std::convertible_to<Population>;
+        { a.select_parents(eval_pop) } -> std::convertible_to<Population>;
 
         { a.crossover(pop) } -> std::convertible_to<typename P::solution>;
 
@@ -79,8 +79,9 @@ namespace genetic {
 
             while (!should_stop(state)) {
                 auto [next_gen, mating] = _problem.select_next_gen(pop_fitness);
+                auto mating_eval = _problem.evaluate(mating);
                 while (size(next_gen) < size(pop)) {
-                    auto selected_parents = _problem.select_parents(mating);
+                    auto selected_parents = _problem.select_parents(mating_eval);
                     auto c = _problem.crossover(selected_parents);
                     _problem.mutate(c, _mutation_rate);
                     next_gen.insert(next_gen.end(), std::move(c));
