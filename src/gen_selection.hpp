@@ -99,6 +99,41 @@ namespace genetic {
             return pop;
         }
 
+        typename Problem::population
+            optimize(float target_fitness) {
+            auto pop = _problem.init_population();
+            auto pop_fitness = _problem.evaluate(pop);
+            state state;
+
+            while (!should_stop(state)) {
+                auto [next_gen, mating] = _problem.select_next_gen(pop_fitness);
+                auto mating_eval = _problem.evaluate(mating);
+                while (size(next_gen) < size(pop)) {
+                    auto selected_parents = _problem.select_parents(mating_eval);
+                    auto c = _problem.crossover(selected_parents);
+                    _problem.mutate(c, _mutation_rate);
+                    next_gen.insert(next_gen.end(), std::move(c));
+                }
+                pop = std::move(next_gen);
+                pop_fitness = _problem.evaluate(pop);
+                state.generation++;
+
+                for (auto &solution : pop_fitness) {
+                    if (solution.second <= target_fitness) {
+                        state.stop = true;
+                        break;
+                    }
+                }
+
+                if (_logger != nullptr) {
+                    auto p_best = _problem.find_best_in(pop);
+                    (*_logger)(state.generation, p_best);
+                }
+            }
+
+            return pop;
+        }
+
         typename Problem::solution
             optimize_best() {
             auto best_pop = optimize();
@@ -109,11 +144,12 @@ namespace genetic {
     private:
         struct state {
             int generation = 0;
+            bool stop = false;
         };
 
     private:
         bool should_stop(state const &state) {
-            return state.generation > _max_generation;
+            return state.stop || state.generation > _max_generation;
         }
 
     private:
