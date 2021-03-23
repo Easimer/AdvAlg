@@ -4,10 +4,12 @@ set(SRC
     hc_stochastic.hpp
     hc_steepest_ascent.hpp
 	gen_selection.hpp
+    particle_swarm_optimization.hpp
 
     smallest_bound_poly.hpp
     traveling_salesman.hpp
     path_finding_program.hpp
+    function_approximation.hpp
 
     vec2.hpp
  )
