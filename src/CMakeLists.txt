@@ -8,6 +8,7 @@ set(SRC_HEADERS
     traveling_salesman.hpp
     path_finding_program.hpp
     function_approximation.hpp
+    traveling_salesman_program.hpp
 
     vec2.hpp
  )
@@ -27,5 +28,6 @@ add_solution(genprog_pathfind entry_genprog_pathfind.cpp)
 add_solution(pso_funcapprox entry_pso_funcapprox.cpp)
 add_solution(hillclimb_polygon entry_hillclimb_polygon.cpp)
 add_solution(genetic_travelingsalesman entry_genetic_travelingsalesman.cpp)
+add_solution(genprog_travelingsalesman entry_genprog_travelingsalesman.cpp)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/labyrinth0.txt ${CMAKE_CURRENT_BINARY_DIR}/labyrinth0.txt COPYONLY)
