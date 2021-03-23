@@ -2,8 +2,22 @@
 
 #include <vector>
 #include <random>
+#include <functional>
 
 namespace pso {
+	template<typename P, typename V>
+	struct particle {
+		P position;
+		V velocity;
+		P optima;
+	};
+
+	template<typename P, typename V>
+	struct swarm {
+		std::vector<particle<P, V>> particles;
+		P optima;
+	};
+
 #if __cplusplus > 201703L
 	template<typename P>
 	concept indexable = requires(P p, size_t idx) {
@@ -34,19 +48,6 @@ namespace pso {
 	template<typename Problem, typename Position>
 	concept fitness_evaluable = requires(Problem P, Position p) {
 		{ P.evaluate_fitness(p) } -> std::same_as<float>;
-	};
-
-	template<typename P, typename V>
-	struct particle {
-		P position;
-		V velocity;
-		P optima;
-	};
-
-	template<typename P, typename V>
-	struct swarm {
-		std::vector<particle<P, V>> particles;
-		P optima;
 	};
 
 	template<typename Problem, typename Position, typename Velocity>

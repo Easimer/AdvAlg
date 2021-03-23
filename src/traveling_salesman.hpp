@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <random>
 #include <functional>
+#include <iterator>
 
 template<typename City>
 class traveling_salesman {

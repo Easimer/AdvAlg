@@ -3,6 +3,8 @@
 #include <cassert>
 #include <random>
 #include <vector>
+#include <functional>
+#include <iterator>
 
 class path_finding_program {
 public:

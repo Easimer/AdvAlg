@@ -1,55 +1,5 @@
-#include <cstdio>
-#include "vec2.hpp"
-
-#include "gnuplot.hpp"
-#include "hc_stochastic.hpp"
-#include "hc_steepest_ascent.hpp"
 #include "gen_selection.hpp"
-#include "smallest_bound_poly.hpp"
 #include "traveling_salesman.hpp"
-#include "path_finding_program.hpp"
-#include "particle_swarm_optimization.hpp"
-#include "function_approximation.hpp"
-
-std::vector<vec2>
-test_data() {
-    return { {0, 0}, {2, 3}, {-1, 4}, {-3, -6}, {2, 2}, {-1, 3} };
-}
-
-std::vector<vec2>
-random_data() {
-    std::vector<vec2> ret;
-
-    for (int i = 0; i < 50; i++) {
-        auto x = ((rand() % 2000) - 1000) / 1000.0f * 40;
-        auto y = ((rand() % 2000) - 1000) / 1000.0f * 40;
-        ret.push_back({ x, y });
-    }
-
-    return ret;
-}
-
-static void hill_climbing_demo() {
-    auto points = random_data();
-    smallest_bounding_polygon problem(7, points);
-    auto epsilon = 0.5f;
-    auto minimum_change = 0.01f;
-    auto max_steps = 100000;
-
-    auto solver0 = hill_climbing::stochastic(problem, epsilon, minimum_change, max_steps);
-    auto solution0 = solver0.optimize();
-
-    auto solver1 = hill_climbing::steepest_ascent(problem, epsilon, minimum_change, max_steps);
-    auto solution1 = solver1.optimize();
-
-    auto plot = gnuplot::polygons_and_points {
-        { gnuplot::polygon, "HC-Stochastic", solution0 },
-        { gnuplot::polygon, "HC-Steepst-Ascent", solution1 },
-        { gnuplot::points, "Pontok", points }
-    };
-
-    printf("%s\n", plot.str().c_str());
-}
 
 struct city {
     float x, y;
@@ -62,21 +12,21 @@ static float distance(city const &lhs, city const &rhs) {
 }
 
 static void print_graph(FILE *f, std::vector<city> const &cities, traveling_salesman<city>::path const &path) {
-     fprintf(f, "digraph cities {\n");
-     auto N = path.size();
-     fprintf(f, "C%zu -> C%zu;\n", path[N - 1], path[0]);
-     for (size_t i = 1; i < N; i++) {
-         fprintf(f, "C%zu -> C%zu;\n", path[i - 1], path[i - 0]);
-     }
-     fprintf(f, "\n");
-     for (auto idx : path) {
-         auto &city = cities[idx];
-         fprintf(f, "C%zu [ pos = \"%f,%f!\"];\n", idx, city.x, city.y);
-     }
-     fprintf(f, "}\n\n");
+    fprintf(f, "digraph cities {\n");
+    auto N = path.size();
+    fprintf(f, "C%zu -> C%zu;\n", path[N - 1], path[0]);
+    for (size_t i = 1; i < N; i++) {
+        fprintf(f, "C%zu -> C%zu;\n", path[i - 1], path[i - 0]);
+    }
+    fprintf(f, "\n");
+    for (auto idx : path) {
+        auto &city = cities[idx];
+        fprintf(f, "C%zu [ pos = \"%f,%f!\"];\n", idx, city.x, city.y);
+    }
+    fprintf(f, "}\n\n");
 }
 
-static void genetic_demo() {
+int main(int argc, char **argv) {
     std::vector<city> cities = {
         { 63, 71 },
         { 94, 71 },
@@ -421,154 +371,6 @@ static void genetic_demo() {
     >(problem, 100000, 0.001f, &logger);
 
     auto solutions = solver.optimize();
-}
-
-std::vector<path_finding_program::level_tile> load_level(char const *path, int *out_width, int *out_height) {
-    FILE *f;
-
-    f = fopen(path, "r");
-    if (f == nullptr) {
-        fprintf(stderr, "load_level: failed to open '%s' for reading\n", path);
-        std::abort();
-    }
-
-    std::vector<path_finding_program::level_tile> ret;
-    int width = 0;
-    int height = 0;
-
-    while (!feof(f)) {
-        char ch;
-        path_finding_program::level_tile tile;
-
-        fread(&ch, 1, 1, f);
-
-        if (ch == '\n') {
-            if (width == 0) {
-                width = ret.size();
-            }
-
-            height++;
-            continue;
-        }
-
-        switch (ch) {
-        case '#': tile = path_finding_program::TILE_WALL; break;
-        case ' ': tile = path_finding_program::TILE_EMPTY; break;
-        case 'S': tile = path_finding_program::TILE_START; break;
-        case 'X': tile = path_finding_program::TILE_EXIT; break;
-        default: fprintf(stderr, "load_level: unknown tile '%c'\n", ch);  std::abort(); break;
-        }
-
-        ret.push_back(tile);
-    }
-
-    *out_width = width;
-    *out_height = height - 1; // subtract last empty line
-    fclose(f);
-
-    return ret;
-}
-
-static void genetic_programming_demo() {
-    path_finding_program::level L;
-
-    auto tiles = load_level("labyrinth0.txt", &L.width, &L.height);
-    L.tiles = tiles.data();
-
-    path_finding_program problem(&L);
-
-    auto logger = [&](int gen, path_finding_program::solution const &best) {
-    };
-
-    auto solver = genetic::algorithm<
-        decltype(problem),
-        decltype(logger)
-    >(problem, 100000, 0.001f, &logger);
-
-    auto results = solver.optimize(0.0f);
-
-    auto best = problem.find_best_in(results);
-
-    int prev_x = -1;
-    int prev_y = -1;
-    auto callback = [&](int x, int y) {
-        if (prev_x != x || prev_y != y) {
-            printf("%d %d\n", x, y);
-            prev_x = x;
-            prev_y = y;
-        }
-    };
-
-    printf("Exec'ing best program:\n");
-    problem.execute_program(best, callback);
-    printf("STOP\n");
-}
-
-static void pso_demo() {
-    using problem = function_approx::problem<4>;
-    using coef = typename problem::coefficients_t;
-
-    // Het darab minta az alabbi fuggvenybol:
-    // y = 5.75 * x**3 - 4.5 * x**2 + 3
-    // Azaz az elvart megoldas: (3, 0, -4.5, 5.75)
-    std::array<std::pair<float, float>, 7> known_points {
-        std::make_pair(-32.f, -193021),
-        std::make_pair(-5.f, -3313 / 4.f),
-        std::make_pair(-1.f, -29 / 4.f),
-        std::make_pair(0.f, 3.f),
-        std::make_pair(1.f, 17 / 4.f),
-        std::make_pair(5.f, -2437 / 4.f),
-        std::make_pair(18.f, 32079),
-    };
-
-    // Fuggveny ami kiertekel egy megoldast
-    auto func = [&](coef const &C) -> float {
-        auto total_error = 0.0f;
-
-        for (auto &p : known_points) {
-            auto x = p.first;
-            auto y_expected = p.second;
-            auto y = C[0] + C[1] * x + C[2] * x * x + C[3] * x * x * x;
-            total_error += std::abs(y_expected - y);
-        }
-
-        return total_error;
-    };
-
-    problem prob(func);
-    pso::params params {};
-    params.omega = 0.7f;
-    params.phi_g = 0.2f;
-    params.phi_p = 0.1f;
-    params.max_iterations = 50000;
-
-    using solver_t = pso::solver<problem>;
-    solver_t solver(prob, params);
-
-    class logger : public solver_t::logger {
-    public:
-        ~logger() override = default;
-        void on_iteration_done(size_t gen, float global_fitness) {
-            printf("fitness [%zu] %f\n", gen, global_fitness);
-        }
-
-        void on_next_state(size_t gen, size_t pidx, float fitness, solver_t::particle_t const &particle) override {
-        }
-    } logger;
-
-    auto solution = solver.solve(1000, &logger);
-    
-    printf("Expected:   y = (5.75) * x**3 + (-4.5) * x**2 + (0) * x + (3)\n");
-    printf("Calculated: y = (%f) * x**3 + (%f) * x**2 + (%f) * x + (%f)\n", solution[3], solution[2], solution[1], solution[0]);
-}
-
-int main(int argc, char **argv) {
-    srand(0);
-
-    // hill_climbing_demo();
-    // genetic_demo();
-    //genetic_programming_demo();
-    pso_demo();
 
     return 0;
 }

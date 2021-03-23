@@ -1,6 +1,9 @@
 #pragma once
 
 #include <array>
+#include <vector>
+#include <random>
+#include <functional>
 
 namespace function_approx {
 	// Egyutthatokat tarolo tomb
