@@ -21,13 +21,31 @@ namespace genetic {
         { a.mutate(sol, 1.0f) };
     };
 
+    // Kepes letrehozni kovetkezo generaciot
+    template<typename P, typename Population, typename EvaluatedPopulation>
+    concept can_select_next_gen = requires(P a, Population pop, EvaluatedPopulation eval_pop) {
+        { a.evaluate(pop) } -> std::convertible_to<EvaluatedPopulation>;
+        { a.select_next_gen(eval_pop) } -> std::convertible_to<std::pair<Population, Population>>;
+    };
+
+    // Kepes letrehozni kovetkezo generaciot (elore kiertekelt fitnessel)
+    template<typename P, typename Population, typename EvaluatedPopulation>
+    concept can_select_next_gen_preevaluated = requires(P a, Population pop, EvaluatedPopulation eval_pop) {
+        { a.evaluate(pop) } -> std::convertible_to<EvaluatedPopulation>;
+        // Ebben az esetben kell egy olyan evaluate overload, ami mar
+        // egy kiertekelt populaciot fogad be (es azzal is ter vissza)
+        { a.evaluate(eval_pop) } -> std::convertible_to<EvaluatedPopulation>;
+        { a.select_next_gen(eval_pop) } -> std::convertible_to<std::pair<Population, EvaluatedPopulation>>;
+    };
+
     // Kepes-e a problema populacioval kapcsolatos muveleteket elvegezni?
     template<typename P, typename Population, typename EvaluatedPopulation>
     concept can_manipulate_populations = requires(P a, Population pop, EvaluatedPopulation eval_pop) {
         { a.init_population() } -> std::convertible_to<Population>;
-        { a.evaluate(pop) } -> std::convertible_to<EvaluatedPopulation>;
-        { a.select_next_gen(eval_pop) } -> std::convertible_to<std::pair<Population, Population>>;
+        
         { a.select_parents(eval_pop) } -> std::convertible_to<Population>;
+
+        requires can_select_next_gen<P, Population, EvaluatedPopulation> || can_select_next_gen_preevaluated<P, Population, EvaluatedPopulation>;
 
         { a.crossover(pop) } -> std::convertible_to<typename P::solution>;
 

@@ -1,7 +1,7 @@
 set(SRC_HEADERS
     hc_stochastic.hpp
     hc_steepest_ascent.hpp
-	gen_selection.hpp
+    gen_selection.hpp
     particle_swarm_optimization.hpp
 
     smallest_bound_poly.hpp
@@ -9,6 +9,7 @@ set(SRC_HEADERS
     path_finding_program.hpp
     function_approximation.hpp
     traveling_salesman_program.hpp
+    work_allocation.hpp
 
     vec2.hpp
  )
@@ -29,5 +30,6 @@ add_solution(pso_funcapprox entry_pso_funcapprox.cpp)
 add_solution(hillclimb_polygon entry_hillclimb_polygon.cpp)
 add_solution(genetic_travelingsalesman entry_genetic_travelingsalesman.cpp)
 add_solution(genprog_travelingsalesman entry_genprog_travelingsalesman.cpp)
+add_solution(nsga_work_allocation entry_nsga_work_allocation.cpp)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/labyrinth0.txt ${CMAKE_CURRENT_BINARY_DIR}/labyrinth0.txt COPYONLY)
