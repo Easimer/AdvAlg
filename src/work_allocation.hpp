@@ -6,51 +6,32 @@
 #include <numeric>
 #include <iterator>
 #include <functional>
+#include <algorithm>
 
-struct worker {
-	float memory_capacity;
-	float speed;
-	float running_cost_multiplier;
+struct contractor {
+	float cost;
+	float inverse_quality;
 };
 
-inline float running_cost(worker const &w) {
-	return w.running_cost_multiplier * (w.memory_capacity + w.speed);
-}
-
-inline bool operator==(worker const &lhs, worker const &rhs) {
+inline bool operator==(contractor const &lhs, contractor const &rhs) {
 	return
-		(fabs(rhs.memory_capacity - lhs.memory_capacity) < 0.00001f) &&
-		(fabs(rhs.speed - lhs.speed) < 0.00001f) &&
-		(fabs(rhs.running_cost_multiplier - lhs.running_cost_multiplier) < 0.00001f);
+		(fabs(rhs.cost - lhs.cost) < 0.00001f) &&
+		(fabs(rhs.inverse_quality - lhs.inverse_quality) < 0.00001f);
 }
 
 class work_allocation {
 public:
-	using memory_requirement = float;
-	using total_time_requirement = float;
-
-	struct task {
-		memory_requirement memory_required;
-		total_time_requirement total_time;
-	};
-
-	using solution = worker;
-	using population = std::list<worker>;
+	using solution = contractor;
+	using population = std::list<contractor>;
 
 	using solution_with_fitness = std::pair<solution, float>;
 	using evaluated_population = std::list<solution_with_fitness>;
 
-	work_allocation(task const &task) : _task(task) {
+	work_allocation(population contractors) : _contractors(std::move(contractors)) {
 	}
 
 	population init_population() {
-		population ret;
-
-		for (int i = 0; i < 500; i++) {
-			ret.push_front(random_worker());
-		}
-
-		return ret;
+		return _contractors;
 	}
 
 	evaluated_population evaluate(population const &pop) {
@@ -64,15 +45,7 @@ public:
 	}
 
 	evaluated_population evaluate(evaluated_population const &pop) {
-		auto ret = pop;
-
-		for (auto &p : ret) {
-			if (p.first.memory_capacity < _task.memory_required) {
-				p.second = 0;
-			}
-		}
-
-		return ret;
+		return pop;
 	}
 
 	std::pair<population, evaluated_population> select_next_gen(evaluated_population const &pop) {
@@ -87,7 +60,7 @@ public:
 
 			for (auto &p : P) {
 				bool non_dominated = std::all_of(P.begin(), P.end(), [&](solution_with_fitness const &q) {
-					return !(dominates(_task, q.first, p.first));
+					return !(dominates(q.first, p.first));
 				});
 
 				if (non_dominated) {
@@ -105,8 +78,8 @@ public:
 				}), P.end());
 			}
 
-			std::vector<std::pair<worker, float>> F_sh;
-			std::transform(F.cbegin(), F.cend(), std::back_inserter(F_sh), [&](worker const &p) {
+			std::vector<std::pair<contractor, float>> F_sh;
+			std::transform(F.cbegin(), F.cend(), std::back_inserter(F_sh), [&](contractor const &p) {
 				float sh_sum = 0;
 				for (auto &q : F) {
 					sh_sum += sharing(dist(p, q));
@@ -197,9 +170,8 @@ public:
 
 		float c = dist(_rand);
 
-		ret.memory_capacity = p0.memory_capacity + c * (p1.memory_capacity - p0.memory_capacity);
-		ret.speed = p0.speed + c * (p1.speed - p0.speed);
-		ret.running_cost_multiplier = p0.running_cost_multiplier + c * (p1.running_cost_multiplier - p0.running_cost_multiplier);
+		ret.cost = p0.cost + c * (p1.cost - p0.cost);
+		ret.inverse_quality = p0.inverse_quality + c * (p1.inverse_quality - p0.inverse_quality);
 
 		return ret;
 	}
@@ -209,32 +181,18 @@ public:
 	}
 
 	solution mutate(solution orig, float chance) {
-		std::uniform_real_distribution dist_dice(0.0, 1.0);
-		std::normal_distribution dist_mutation(0.0, 1.0);
-		std::normal_distribution dist_mutation_mul(0.0, 0.1);
-
-		if (dist_dice(_rand) < chance) {
-			orig.memory_capacity += dist_mutation(_rand);
-			orig.speed += dist_mutation(_rand);
-			orig.running_cost_multiplier += dist_mutation_mul(_rand);
-
-			orig.memory_capacity = std::max(orig.memory_capacity, 1.0f);
-			orig.speed = std::max(orig.speed, 0.1f);
-			orig.running_cost_multiplier = std::max(orig.running_cost_multiplier, 0.5f);
-		}
-
 		return orig;
 	}
 
-	worker random_worker() {
-		std::uniform_real_distribution dist_mem(32.0, 1024.0);
-		std::uniform_real_distribution dist_speed(1.0, 8.0);
-		std::normal_distribution dist_cost_multiplier(1.0, 0.25);
+	template<typename T>
+	static contractor random_contractor(T &rand) {
+		std::exponential_distribution dist_cost(0.25f);
+		std::exponential_distribution dist_inverse_quality(0.25f);
 
-		worker w;
-		w.memory_capacity = dist_mem(_rand);
-		w.speed = dist_speed(_rand);
-		w.running_cost_multiplier = dist_cost_multiplier(_rand);
+		contractor w;
+		w.cost = 1 + std::max(0.f, dist_cost(rand));
+		w.inverse_quality = 1 + std::max(0.f, dist_inverse_quality(rand));
+
 		return w;
 	}
 
@@ -242,36 +200,30 @@ public:
 		return std::max(0.0f, 1 - (dist / sigma_share) * (dist / sigma_share));
 	}
 
-	static float dist(worker const &lhs, worker const &rhs) {
-		auto dx = rhs.memory_capacity - lhs.memory_capacity;
-		auto dy = rhs.speed - lhs.speed;
-		auto dz = rhs.running_cost_multiplier - lhs.running_cost_multiplier;
-		return std::sqrt(dx * dx + dy * dy + dz * dz);
+	static float dist(contractor const &lhs, contractor const &rhs) {
+		auto dx = rhs.cost - lhs.cost;
+		auto dy = rhs.inverse_quality - lhs.inverse_quality;
+		return std::sqrt(dx * dx + dy * dy);
 	}
 
-	bool dominates(task const &T, worker const &lhs, worker const &rhs) {
+	bool dominates(contractor const &lhs, contractor const &rhs) {
 		int c = 0;
 		int b = 0;
 
-		if (lhs.speed / T.total_time >= rhs.speed / T.total_time) {
+		if (lhs.cost <= rhs.cost) {
 			c++;
-			if (lhs.speed / T.total_time > rhs.speed / T.total_time) b++;
+			if (lhs.cost < rhs.cost) b++;
 		}
 
-		if (fabs(T.memory_required - lhs.memory_capacity) <= fabs(T.memory_required - rhs.memory_capacity)) {
+		if (lhs.inverse_quality <= rhs.inverse_quality) {
 			c++;
-			if (fabs(T.memory_required - lhs.memory_capacity) < fabs(T.memory_required - rhs.memory_capacity)) b++;
+			if (lhs.inverse_quality < rhs.inverse_quality) b++;
 		}
 
-		if (running_cost(lhs) <= running_cost(rhs)) {
-			c++;
-			if (running_cost(lhs) < running_cost(rhs)) b++;
-		}
-
-		return c == 3 && b > 0;
+		return c == 2 && b > 0;
 	}
 private:
-	task _task;
+	population _contractors;
 	float fitness_deg = 0.9f;
 	float sigma_share = 100;
 
