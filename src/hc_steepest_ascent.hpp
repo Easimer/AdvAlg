@@ -6,18 +6,28 @@
 
 namespace hill_climbing {
 #if __cplusplus > 201703L
-    template<typename T>
-    concept SteepestAscentSolvable = requires(T a) {
-        typename T::solution;
-        { a.initial_guess() } -> std::convertible_to<typename T::solution>;
-        { a.fitness({}) } -> std::convertible_to<float>;
-        { a.best_neighbor({}, float()) } -> std::convertible_to<typename T::solution>;
+    template<typename Problem, typename Solution>
+    concept can_calculate_fitness = requires(Problem p, Solution s) {
+        { p.fitness(s) } -> std::convertible_to<float>;
+    };
+
+    template<typename Problem, typename Solution>
+    concept can_find_best_neighbor = requires(Problem p, Solution s, float epsilon) {
+        { p.best_neighbor(s, epsilon) } -> std::same_as<typename Problem::solution>;
+    };
+
+    template<typename Problem>
+    concept steepest_ascent_solvable = requires(Problem a) {
+        typename Problem::solution;
+        { a.initial_guess() } -> std::same_as<typename Problem::solution>;
+        requires can_calculate_fitness<Problem, typename Problem::solution>;
+        requires can_find_best_neighbor<Problem, typename Problem::solution>;
     };
 #else
-#define SteepestAscentSolvable typename
+#define steepest_ascent_solvable typename
 #endif
 
-    template<SteepestAscentSolvable Problem>
+    template<steepest_ascent_solvable Problem>
     class steepest_ascent {
     public:
         steepest_ascent(
