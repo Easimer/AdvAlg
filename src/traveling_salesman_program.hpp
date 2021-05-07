@@ -338,7 +338,7 @@ public:
         param0 = 0;
         param1 = 0;
         switch (I.op) {
-            case OP_RELJMP_NC: mnemonic = "jmp.nc"; param0 = -I.x; break;
+            case OP_RELJMP_NC: mnemonic = "jmp.nc"; param0 = I.x; break;
             case OP_PREPEND_NEXT: mnemonic = "add.front"; break;
             case OP_APPEND_NEXT: mnemonic = "add.back"; break;
             case OP_ROTATE_LEFT: mnemonic = "rot.l"; break;
